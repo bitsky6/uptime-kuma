@@ -291,6 +291,10 @@
                                     <template v-if="monitor.type === 'mysql'">
                                         <input id="sqlConnectionString" v-model="monitor.databaseConnectionString" type="text" class="form-control" placeholder="mysql://username:password@host:port/database">
                                     </template>
+                                    <template v-if="monitor.type === 'oracledb'">
+                                        <input id="sqlConnectionString" v-model="monitor.databaseConnectionString" type="text" class="form-control" placeholder='"user":"<USER>","password":"<PASSWORD>","connectionString":"(DESCRIPTION =(ADDRESS_LIST=(ADDRESS=(PROTOCOL=TCP)(HOST=<HOSTADDRESS>)(PORT=<PORT>)))(CONNECT_DATA=(SERVER=DEDICATED)(SERVICE_NAME=<SERVICENAME>)))"'>
+                                    </template>
+
                                 </div>
                                 <div class="my-3">
                                     <label for="sqlQuery" class="form-label">{{ $t("Query") }}</label>
