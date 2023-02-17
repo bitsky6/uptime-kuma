@@ -355,6 +355,29 @@ exports.mongodbPing = async function (connectionString) {
 };
 
 /**
+ * Run a query on Oracle DB
+ * @param {string} connectionString The database connection string
+ * @param {string} query The query to validate the database with
+ * @returns {Promise<(string[]|Object[]|Object)>}
+ */
+exports.oracledbQuery = async function (connectionString, query) {
+
+    try {
+
+        let connectionStringJson=JSON.parse('{' + connectionString + '}');
+        let connection = await oracledb.getConnection(connectionStringJson);
+
+        await connection.execute(query);
+        await connection.close();
+
+    } 
+    catch (err) {
+        throw err;
+    } 
+
+};
+
+/**
  * Query radius server
  * @param {string} hostname Hostname of radius server
  * @param {string} username Username to use
