@@ -3,11 +3,13 @@ const axios = require("axios");
 const FormData = require("form-data");
 
 class Webhook extends NotificationProvider {
-
     name = "webhook";
 
+    /**
+     * @inheritdoc
+     */
     async send(notification, msg, monitorJSON = null, heartbeatJSON = null) {
-        let okMsg = "Sent Successfully.";
+        const okMsg = "Sent Successfully.";
 
         try {
             let data = {
@@ -15,17 +17,17 @@ class Webhook extends NotificationProvider {
                 monitor: monitorJSON,
                 msg,
             };
-            let finalData;
             let config = {
                 headers: {}
             };
 
             if (notification.webhookContentType === "form-data") {
-                finalData = new FormData();
-                finalData.append("data", JSON.stringify(data));
-                config.headers = finalData.getHeaders();
-            } else {
-                finalData = data;
+                const formData = new FormData();
+                formData.append("data", JSON.stringify(data));
+                config.headers = formData.getHeaders();
+                data = formData;
+            } else if (notification.webhookContentType === "custom") {
+                data = await this.renderTemplate(notification.webhookCustomBody, msg, monitorJSON, heartbeatJSON);
             }
 
             if (notification.webhookAdditionalHeaders) {
@@ -39,7 +41,7 @@ class Webhook extends NotificationProvider {
                 }
             }
 
-            await axios.post(notification.webhookURL, finalData, config);
+            await axios.post(notification.webhookURL, data, config);
             return okMsg;
 
         } catch (error) {

@@ -1,41 +1,74 @@
-const path = require("path");
-const Bree = require("bree");
-const { SHARE_ENV } = require("worker_threads");
+const { UptimeKumaServer } = require("./uptime-kuma-server");
+const { clearOldData } = require("./jobs/clear-old-data");
+const { incrementalVacuum } = require("./jobs/incremental-vacuum");
+const { CronJob } = require('cron');
 const { log } = require("../src/util");
-let bree;
+
 const jobs = [
     {
         name: "clear-old-data",
-        interval: "at 03:14",
+        interval: "14 03 * * *",
+        jobFunc: clearOldData,
+        croner: null,
     },
+    {
+        name: "incremental-vacuum",
+        interval: "*/5 * * * *",
+        jobFunc: incrementalVacuum,
+        croner: null,
+    }
 ];
 
 /**
  * Initialize background jobs
- * @param {Object} args Arguments to pass to workers
- * @returns {Bree}
+ * @returns {Promise<void>}
  */
-const initBackgroundJobs = function (args) {
-    bree = new Bree({
-        root: path.resolve("server", "jobs"),
-        jobs,
-        worker: {
-            env: SHARE_ENV,
-            workerData: args,
-        },
-        workerMessageHandler: (message) => {
-            log.info("jobs", message);
-        }
-    });
+const initBackgroundJobs = async function () {
+    try {
+        const timezone = await UptimeKumaServer.getInstance().getTimezone();
 
-    bree.start();
-    return bree;
+        if (!timezone) {
+            throw new Error("Timezone is not defined or invalid.");
+        }
+
+        for (const job of jobs) {
+            try {
+                log.info("jobs", `Initializing job: ${job.name}`);
+                const cronJob = new CronJob(
+                    job.interval,
+                    job.jobFunc,
+                    null,
+                    false,
+                    timezone
+                );
+                cronJob.start();
+                job.croner = cronJob;
+                log.info("jobs", `Job '${job.name}' initialized successfully.`);
+            } catch (err) {
+                log.error("jobs", `Failed to initialize job '${job.name}': ${err.message}`);
+            }
+        }
+    } catch (err) {
+        log.error("jobs", `Error initializing background jobs: ${err.message}`);
+    }
 };
 
-/** Stop all background jobs if running */
+/**
+ * Stop all background jobs if running
+ * @returns {void}
+ */
 const stopBackgroundJobs = function () {
-    if (bree) {
-        bree.stop();
+    for (const job of jobs) {
+        if (job.croner) {
+            try {
+                log.info("jobs", `Stopping job: ${job.name}`);
+                job.croner.stop();
+                job.croner = null;
+                log.info("jobs", `Job '${job.name}' stopped successfully.`);
+            } catch (err) {
+                log.error("jobs", `Failed to stop job '${job.name}': ${err.message}`);
+            }
+        }
     }
 };
 
