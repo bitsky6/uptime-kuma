@@ -6,12 +6,15 @@
 FROM node:22.14.0-slim AS builder
 
 # Log and set npm config for ARM if needed
-RUN if [ "$TARGETPLATFORM" = "linux/arm64/v8" ]; then \
-      echo "Building for ARMv8: forcing native compile for node-oracledb"; \
-      npm config set build_from_source true; \
-    else \
-      echo "Building for linux/amd64"; \
-    fi
+RUN case "$TARGETPLATFORM" in \
+      linux/arm*) \
+        echo "Building for ARM architecture: $TARGETPLATFORM"; \
+        npm config set build_from_source true; \
+        ;; \
+      *) \
+        echo "Building for non-ARM architecture: $TARGETPLATFORM"; \
+        ;; \
+    esac
 
 # Set working directory
 WORKDIR /app
